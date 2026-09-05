@@ -51,8 +51,7 @@ const els = {
   headerDate: document.querySelector("#header-date"), headerStreak: document.querySelector("#header-streak"),
   dueWrap: document.querySelector("#due-todos-wrap"), dueProgress: document.querySelector("#due-progress"), dueList: document.querySelector("#due-todo-list"),
   todayStudy: document.querySelector("#today-study"), todayRest: document.querySelector("#today-rest"), todayTotal: document.querySelector("#today-total"),
-  todayRecords: document.querySelector("#today-records"), recordsEmpty: document.querySelector("#records-empty"), todayDonut: document.querySelector("#today-donut"),
-  donutPlot: document.querySelector("#donut-plot"), donutLegend: document.querySelector("#donut-legend"), homeCalendar: document.querySelector("#home-calendar"),
+  todayRecords: document.querySelector("#today-records"), todayDonut: document.querySelector("#today-donut"), homeCalendar: document.querySelector("#home-calendar"),
   tomorrowForm: document.querySelector("#tomorrow-form"), tomorrowInput: document.querySelector("#tomorrow-input"), tomorrowList: document.querySelector("#tomorrow-list"),
   monthPicker: document.querySelector("#month-picker"), monthCalendar: document.querySelector("#month-calendar"), monthStudy: document.querySelector("#month-study"),
   monthRest: document.querySelector("#month-rest"), monthDays: document.querySelector("#month-days"), monthStreak: document.querySelector("#month-streak"),
@@ -85,7 +84,6 @@ function bindEvents() {
     if (["today", "month", "data"].includes(view)) switchView(view, false);
   });
   document.querySelector("#open-record-dialog").addEventListener("click", handleOpenRecordDialog);
-  els.recordsEmpty.addEventListener("click", handleOpenRecordDialog);
   document.querySelector("#close-record-dialog").addEventListener("click", closeRecordDialog);
   document.querySelector("#cancel-record").addEventListener("click", closeRecordDialog);
   els.recordForm.addEventListener("submit", saveRecordFromForm);
@@ -181,12 +179,26 @@ function renderTodayRecords(date) {
 }
 
 function renderTodayDonut(records, studyMinutes, restMinutes) {
-  const hasRecords = records.length > 0;
-  els.todayDonut.hidden = !hasRecords;
-  els.recordsEmpty.hidden = hasRecords;
-  if (!hasRecords) {
-    els.donutPlot.replaceChildren();
-    els.donutLegend.replaceChildren();
+  if (records.length === 0) {
+    const button = document.createElement("button");
+    button.className = "donut-empty";
+    button.type = "button";
+    button.setAttribute("aria-label", "今天还没有记录，点击记一笔");
+    button.addEventListener("click", handleOpenRecordDialog);
+
+    const plot = document.createElement("span");
+    plot.className = "donut-empty-plot";
+    plot.setAttribute("aria-hidden", "true");
+    const svg = createSvgElement("svg", { viewBox: "0 0 140 140" });
+    svg.append(createSvgElement("circle", {
+      cx: "70", cy: "70", r: "62", fill: "none", stroke: "rgba(43,45,49,0.12)",
+      "stroke-width": "14", "stroke-dasharray": "6 8"
+    }));
+    const message = document.createElement("span");
+    message.textContent = "今天还没有记录";
+    plot.append(svg, message);
+    button.append(plot);
+    els.todayDonut.replaceChildren(button);
     lastDonutSignature = "[]";
     return;
   }
@@ -209,11 +221,11 @@ function renderTodayDonut(records, studyMinutes, restMinutes) {
   items.sort((a, b) => b.duration - a.duration);
 
   const total = studyMinutes + restMinutes;
-  const outerRadius = 68;
-  const innerRadius = outerRadius * 0.62;
-  const strokeWidth = outerRadius - innerRadius;
-  const radius = (outerRadius + innerRadius) / 2;
+  const radius = 62;
+  const strokeWidth = 14;
   const circumference = 2 * Math.PI * radius;
+  const plot = document.createElement("div");
+  plot.className = "donut-plot";
   const svg = createSvgElement("svg", { viewBox: "0 0 140 140", role: "img" });
   svg.setAttribute("aria-label", `今日共记录${formatDuration(total)}，学习占比${Math.round(studyMinutes / total * 100)}%`);
 
@@ -268,8 +280,11 @@ function renderTodayDonut(records, studyMinutes, restMinutes) {
   centerValue.className = "num";
   centerValue.textContent = `${Math.round(studyMinutes / total * 100)}%`;
   center.append(centerLabel, centerValue);
-  els.donutPlot.replaceChildren(svg, center);
+  plot.append(svg, center);
 
+  const legend = document.createElement("div");
+  legend.className = "donut-legend";
+  legend.setAttribute("aria-label", "今日事项时长图例");
   const legendRows = items.map((item) => {
     const row = document.createElement("div");
     row.className = "donut-legend-row";
@@ -289,7 +304,8 @@ function renderTodayDonut(records, studyMinutes, restMinutes) {
     row.append(swatch, name, meta);
     return row;
   });
-  els.donutLegend.replaceChildren(...legendRows);
+  legend.append(...legendRows);
+  els.todayDonut.replaceChildren(plot, legend);
 }
 
 function createSvgElement(tag, attributes = {}) {

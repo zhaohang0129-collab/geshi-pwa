@@ -102,9 +102,8 @@ h3 { font-size: 1rem; }
 .study-ink { color: var(--study); }
 .rest-ink { color: var(--rest); }
 
-.today-chart-section { margin: 22px 0 26px; }
-.today-donut { display: grid; justify-items: center; gap: 18px; }
-.today-donut[hidden], .donut-empty[hidden] { display: none; }
+.today-chart-section { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin: 22px 0 24px; border: 0; box-shadow: none; }
+.today-donut { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; gap: 18px; border: 0; box-shadow: none; }
 .donut-plot { position: relative; width: 140px; height: 140px; }
 .donut-plot > svg { width: 140px; height: 140px; }
 .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
@@ -120,8 +119,8 @@ h3 { font-size: 1rem; }
 .donut-empty:active { transform: translateY(2px); }
 .donut-empty:focus-visible { outline: 1px solid var(--study); outline-offset: 3px; }
 .donut-empty-plot { position: relative; display: block; width: 140px; height: 140px; }
-.donut-empty-plot svg { width: 140px; height: 140px; fill: none; stroke: rgba(43, 45, 49, .12); stroke-width: 2; stroke-dasharray: 6 8; }
-.donut-empty-plot > span { position: absolute; inset: 0; display: grid; place-content: center; padding: 0 20px; font-size: .78rem; line-height: 1.4; }
+.donut-empty-plot svg { width: 140px; height: 140px; }
+.donut-empty-plot > span { position: absolute; inset: 0; display: grid; place-content: center; padding: 0 20px; color: rgba(43, 45, 49, .45); font-size: 13px; line-height: 1.4; }
 .donut-reveal { animation: donut-reveal .3s ease-out both; }
 
 .record-table-wrap { min-height: 0; }
