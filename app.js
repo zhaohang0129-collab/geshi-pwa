@@ -3,7 +3,9 @@
 const STORAGE_KEY = "geshi-data-v1";
 const QUOTE_CACHE_KEY = "geshi-daily-quote-v1";
 const QUOTE_ATTEMPT_KEY = "geshi-daily-quote-attempt-v1";
+const LAST_CELEBRATED_DATE_KEY = "geshi_lastCelebratedDate";
 const QUOTE_API_URL = "https://v1.hitokoto.cn/?c=i&c=d&c=k";
+const PETAL_PATH = "M8 0C2.6 3.1.7 8.2 2.8 13.2c1.4 3.4 5.2 5.4 5.2 5.4s3.8-2 5.2-5.4C15.3 8.2 13.4 3.1 8 0Z";
 const FALLBACK_QUOTES = [
   { text: "问渠那得清如许？为有源头活水来。", source: "朱熹《观书有感》", lang: "zh" },
   { text: "人生代代无穷已，江月年年望相似。", source: "张若虚《春江花月夜》", lang: "zh" },
@@ -48,7 +50,7 @@ let lastRecordTrigger = null;
 let lastDonutSignature = null;
 
 const els = {
-  headerDate: document.querySelector("#header-date"), headerStreak: document.querySelector("#header-streak"),
+  headerDate: document.querySelector("#header-date"), headerStreak: document.querySelector("#header-streak"), streakMark: document.querySelector(".streak-mark"),
   dueWrap: document.querySelector("#due-todos-wrap"), dueProgress: document.querySelector("#due-progress"), dueList: document.querySelector("#due-todo-list"),
   todayStudy: document.querySelector("#today-study"), todayRest: document.querySelector("#today-rest"), todayTotal: document.querySelector("#today-total"),
   todayRecords: document.querySelector("#today-records"), todayDonut: document.querySelector("#today-donut"), homeCalendar: document.querySelector("#home-calendar"),
@@ -430,13 +432,63 @@ function saveRecordFromForm(event) {
     showToast("请检查标签和时长"); return;
   }
   const date = todayKey();
+  const hadRecordsToday = (data.records[date] || []).length > 0;
+  const previousStreak = calculateStreak();
   data.records[date] ||= [];
   const existing = data.records[date].find((record) => record.id === els.recordId.value);
   if (existing) Object.assign(existing, { label: label.slice(0, 40), duration, type, note: els.recordNote.value.trim().slice(0, 160), updatedAt: new Date().toISOString() });
   else createRecord({ label, duration, type, note: els.recordNote.value.trim() });
   if (persistData()) {
+    const currentStreak = calculateStreak();
     closeRecordDialog(); renderAll(); showToast(existing ? "记录已修改" : "记录已写下");
+    if (!existing && !hadRecordsToday && currentStreak === previousStreak + 1) celebrateStreak();
   }
+}
+
+function celebrateStreak() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const beijingDate = beijingDateKey();
+  try {
+    if (localStorage.getItem(LAST_CELEBRATED_DATE_KEY) === beijingDate) return;
+    localStorage.setItem(LAST_CELEBRATED_DATE_KEY, beijingDate);
+  } catch (error) {
+    console.warn("打卡动画状态写入失败", error);
+    return;
+  }
+
+  els.streakMark.querySelector(".streak-petal-layer")?.remove();
+  const layer = document.createElement("span");
+  layer.className = "streak-petal-layer";
+  layer.setAttribute("aria-hidden", "true");
+
+  for (let index = 0; index < 3; index += 1) {
+    const petal = document.createElement("span");
+    petal.className = "streak-petal";
+    const size = 10 + Math.random() * 4;
+    const sway = Math.random() < 0.5 ? -12 : 12;
+    const rotation = -40 + Math.random() * 80;
+    const duration = 1000 + Math.random() * 200;
+    petal.style.setProperty("--petal-size", `${size.toFixed(2)}px`);
+    petal.style.setProperty("--petal-height", `${(size * 1.25).toFixed(2)}px`);
+    petal.style.setProperty("--petal-delay", `${index * 120}ms`);
+    petal.style.setProperty("--petal-duration", `${duration.toFixed(0)}ms`);
+    petal.style.setProperty("--petal-sway-a", `${sway}px`);
+    petal.style.setProperty("--petal-sway-b", `${-sway}px`);
+    petal.style.setProperty("--petal-rotation-a", `${(rotation * 0.25).toFixed(1)}deg`);
+    petal.style.setProperty("--petal-rotation-b", `${(rotation * 0.75).toFixed(1)}deg`);
+    petal.style.setProperty("--petal-rotation", `${rotation.toFixed(1)}deg`);
+
+    const svg = createSvgElement("svg", { viewBox: "0 0 16 20", "aria-hidden": "true" });
+    svg.append(createSvgElement("path", { d: PETAL_PATH, fill: "#F7DFE4", stroke: "none" }));
+    petal.append(svg);
+    petal.addEventListener("animationend", (animationEvent) => {
+      if (animationEvent.target !== petal) return;
+      petal.remove();
+      if (!layer.childElementCount) layer.remove();
+    });
+    layer.append(petal);
+  }
+  els.streakMark.append(layer);
 }
 
 function createRecord({ label, type, duration, note = "" }, date = todayKey()) {
@@ -598,6 +650,7 @@ function safeId(value) { const id = String(value || ""); return /^[a-zA-Z0-9_-]{
 function safeIso(value) { const date = new Date(value || Date.now()); return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString(); }
 function uid() { return globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`; }
 function todayKey() { return dateKey(new Date()); }
+function beijingDateKey() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(new Date()); }
 function dateKey(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
 function monthKey(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`; }
 function parseDateKey(value) { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day); }
@@ -607,7 +660,7 @@ function formatLegendDuration(minutes) { if (minutes < 60) return `${minutes} �
 function updateNetworkStatus() { els.offlineStatus.textContent = navigator.onLine ? "在线，离线副本已准备" : "当前离线，仍可正常使用"; }
 
 async function getDailyQuote() {
-  const beijingDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(new Date());
+  const beijingDate = beijingDateKey();
   try {
     const cached = JSON.parse(localStorage.getItem(QUOTE_CACHE_KEY) || "null");
     if (cached?.date === beijingDate && typeof cached.text === "string" && cached.text.trim()) {
