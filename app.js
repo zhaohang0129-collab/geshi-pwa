@@ -38,17 +38,21 @@ const FALLBACK_QUOTES = [
 ];
 const DEFAULT_CONVERT_MINUTES = 30;
 const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
+const STUDY_DONUT_COLORS = ["#35478C", "#4E5FA0", "#6B79B4", "#8B96C7", "#ACB4D9"];
+const REST_DONUT_COLORS = ["#C98A2D", "#D9A455", "#E5BE83"];
 const formatter = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "short" });
 
 let data = loadData();
 let activeView = "today";
 let lastRecordTrigger = null;
+let lastDonutSignature = null;
 
 const els = {
   headerDate: document.querySelector("#header-date"), headerStreak: document.querySelector("#header-streak"),
   dueWrap: document.querySelector("#due-todos-wrap"), dueProgress: document.querySelector("#due-progress"), dueList: document.querySelector("#due-todo-list"),
   todayStudy: document.querySelector("#today-study"), todayRest: document.querySelector("#today-rest"), todayTotal: document.querySelector("#today-total"),
-  todayRecords: document.querySelector("#today-records"), recordsEmpty: document.querySelector("#records-empty"), homeCalendar: document.querySelector("#home-calendar"),
+  todayRecords: document.querySelector("#today-records"), recordsEmpty: document.querySelector("#records-empty"), todayDonut: document.querySelector("#today-donut"),
+  donutPlot: document.querySelector("#donut-plot"), donutLegend: document.querySelector("#donut-legend"), homeCalendar: document.querySelector("#home-calendar"),
   tomorrowForm: document.querySelector("#tomorrow-form"), tomorrowInput: document.querySelector("#tomorrow-input"), tomorrowList: document.querySelector("#tomorrow-list"),
   monthPicker: document.querySelector("#month-picker"), monthCalendar: document.querySelector("#month-calendar"), monthStudy: document.querySelector("#month-study"),
   monthRest: document.querySelector("#month-rest"), monthDays: document.querySelector("#month-days"), monthStreak: document.querySelector("#month-streak"),
@@ -80,7 +84,8 @@ function bindEvents() {
     const view = location.hash.replace("#", "");
     if (["today", "month", "data"].includes(view)) switchView(view, false);
   });
-  document.querySelector("#open-record-dialog").addEventListener("click", (event) => openRecordDialog(null, event.currentTarget));
+  document.querySelector("#open-record-dialog").addEventListener("click", handleOpenRecordDialog);
+  els.recordsEmpty.addEventListener("click", handleOpenRecordDialog);
   document.querySelector("#close-record-dialog").addEventListener("click", closeRecordDialog);
   document.querySelector("#cancel-record").addEventListener("click", closeRecordDialog);
   els.recordForm.addEventListener("submit", saveRecordFromForm);
@@ -98,6 +103,10 @@ function bindEvents() {
   els.importJson.addEventListener("change", importJson);
   window.addEventListener("online", updateNetworkStatus);
   window.addEventListener("offline", updateNetworkStatus);
+}
+
+function handleOpenRecordDialog(event) {
+  openRecordDialog(null, event.currentTarget);
 }
 
 function switchView(view, updateHash = true) {
@@ -136,7 +145,7 @@ function renderTodayRecords(date) {
   els.todayRest.textContent = formatDuration(rest);
   els.todayTotal.textContent = formatDuration(study + rest);
   els.todayRecords.replaceChildren();
-  els.recordsEmpty.hidden = records.length > 0;
+  renderTodayDonut(records, study, rest);
   records.forEach((record) => {
     const row = document.createElement("tr");
     const itemCell = document.createElement("td");
@@ -169,6 +178,124 @@ function renderTodayRecords(date) {
     row.append(itemCell, typeCell, durationCell, actionCell);
     els.todayRecords.append(row);
   });
+}
+
+function renderTodayDonut(records, studyMinutes, restMinutes) {
+  const hasRecords = records.length > 0;
+  els.todayDonut.hidden = !hasRecords;
+  els.recordsEmpty.hidden = hasRecords;
+  if (!hasRecords) {
+    els.donutPlot.replaceChildren();
+    els.donutLegend.replaceChildren();
+    lastDonutSignature = "[]";
+    return;
+  }
+
+  const signature = JSON.stringify(records.map(({ id, label, type, duration }) => [id, label, type, duration]));
+  const shouldAnimate = signature !== lastDonutSignature && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  lastDonutSignature = signature;
+
+  const sorted = records
+    .map((record) => ({ label: record.label, type: record.type, duration: record.duration }))
+    .sort((a, b) => b.duration - a.duration);
+  const items = sorted.slice(0, 5);
+  if (sorted.length > 5) {
+    items.push({
+      label: "其他",
+      type: "other",
+      duration: sorted.slice(5).reduce((sum, record) => sum + record.duration, 0)
+    });
+  }
+  items.sort((a, b) => b.duration - a.duration);
+
+  const total = studyMinutes + restMinutes;
+  const outerRadius = 68;
+  const innerRadius = outerRadius * 0.62;
+  const strokeWidth = outerRadius - innerRadius;
+  const radius = (outerRadius + innerRadius) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const svg = createSvgElement("svg", { viewBox: "0 0 140 140", role: "img" });
+  svg.setAttribute("aria-label", `今日共记录${formatDuration(total)}，学习占比${Math.round(studyMinutes / total * 100)}%`);
+
+  const maskId = `donut-reveal-${Date.now()}`;
+  const defs = createSvgElement("defs");
+  const mask = createSvgElement("mask", { id: maskId });
+  mask.append(createSvgElement("rect", { width: "140", height: "140", fill: "black" }));
+  const reveal = createSvgElement("circle", {
+    cx: "70", cy: "70", r: String(radius), fill: "none", stroke: "white",
+    "stroke-width": String(strokeWidth), "stroke-dasharray": String(circumference),
+    "stroke-dashoffset": "0", transform: "rotate(-90 70 70)"
+  });
+  reveal.style.setProperty("--donut-circumference", String(circumference));
+  if (shouldAnimate) reveal.classList.add("donut-reveal");
+  mask.append(reveal);
+  defs.append(mask);
+  svg.append(defs);
+
+  svg.append(createSvgElement("circle", {
+    cx: "70", cy: "70", r: String(radius), fill: "none", stroke: "#FAF8F3",
+    "stroke-width": String(strokeWidth)
+  }));
+
+  const segments = createSvgElement("g", { mask: `url(#${maskId})` });
+  let offset = 0;
+  let studyColorIndex = 0;
+  let restColorIndex = 0;
+  items.forEach((item) => {
+    const arcLength = item.duration / total * circumference;
+    const visibleLength = items.length === 1 ? arcLength : Math.max(0.5, arcLength - 2);
+    const color = item.type === "study"
+      ? STUDY_DONUT_COLORS[Math.min(studyColorIndex++, STUDY_DONUT_COLORS.length - 1)]
+      : item.type === "rest"
+        ? REST_DONUT_COLORS[Math.min(restColorIndex++, REST_DONUT_COLORS.length - 1)]
+        : "#9BA0A8";
+    item.color = color;
+    segments.append(createSvgElement("circle", {
+      cx: "70", cy: "70", r: String(radius), fill: "none", stroke: color,
+      "stroke-width": String(strokeWidth), "stroke-linecap": "butt",
+      "stroke-dasharray": `${visibleLength} ${circumference - visibleLength}`,
+      "stroke-dashoffset": String(-offset), transform: "rotate(-90 70 70)"
+    }));
+    offset += arcLength;
+  });
+  svg.append(segments);
+
+  const center = document.createElement("span");
+  center.className = "donut-center";
+  const centerLabel = document.createElement("span");
+  centerLabel.textContent = "学习占比";
+  const centerValue = document.createElement("strong");
+  centerValue.className = "num";
+  centerValue.textContent = `${Math.round(studyMinutes / total * 100)}%`;
+  center.append(centerLabel, centerValue);
+  els.donutPlot.replaceChildren(svg, center);
+
+  const legendRows = items.map((item) => {
+    const row = document.createElement("div");
+    row.className = "donut-legend-row";
+    const swatch = document.createElement("i");
+    swatch.style.backgroundColor = item.color;
+    const name = document.createElement("span");
+    name.className = "donut-legend-name";
+    name.textContent = item.label;
+    const meta = document.createElement("span");
+    meta.className = "donut-legend-meta num";
+    const duration = document.createElement("span");
+    duration.textContent = formatLegendDuration(item.duration);
+    const percent = document.createElement("span");
+    percent.className = "donut-legend-percent";
+    percent.textContent = `${Math.round(item.duration / total * 100)}%`;
+    meta.append(duration, percent);
+    row.append(swatch, name, meta);
+    return row;
+  });
+  els.donutLegend.replaceChildren(...legendRows);
+}
+
+function createSvgElement(tag, attributes = {}) {
+  const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+  return element;
 }
 
 function renderDueTodos(date) {
@@ -460,6 +587,7 @@ function monthKey(date) { return `${date.getFullYear()}-${String(date.getMonth()
 function parseDateKey(value) { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day); }
 function nextDateKey(value) { const date = parseDateKey(value); date.setDate(date.getDate() + 1); return dateKey(date); }
 function formatDuration(minutes) { if (minutes < 60) return `${minutes} 分钟`; const hours = Math.floor(minutes / 60); const rest = minutes % 60; return rest ? `${hours} 小时 ${rest} 分` : `${hours} 小时`; }
+function formatLegendDuration(minutes) { if (minutes < 60) return `${minutes} 分钟`; return `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`; }
 function updateNetworkStatus() { els.offlineStatus.textContent = navigator.onLine ? "在线，离线副本已准备" : "当前离线，仍可正常使用"; }
 
 async function getDailyQuote() {

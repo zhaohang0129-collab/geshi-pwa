@@ -92,6 +92,19 @@
                 </div>
               </div>
 
+              <section class="today-chart-section" aria-label="今日事项时长分布">
+                <div id="today-donut" class="today-donut" hidden>
+                  <div id="donut-plot" class="donut-plot"></div>
+                  <div id="donut-legend" class="donut-legend" aria-label="今日事项时长图例"></div>
+                </div>
+                <button id="records-empty" class="donut-empty" type="button" aria-label="今天还没有记录，点击记一笔">
+                  <span class="donut-empty-plot" aria-hidden="true">
+                    <svg viewBox="0 0 140 140"><circle cx="70" cy="70" r="67" /></svg>
+                    <span>今天还没有记录</span>
+                  </span>
+                </button>
+              </section>
+
               <div class="record-table-wrap">
                 <table class="record-table">
                   <thead>
@@ -99,10 +112,6 @@
                   </thead>
                   <tbody id="today-records"></tbody>
                 </table>
-                <div id="records-empty" class="empty-state">
-                  <svg viewBox="0 0 72 54" aria-hidden="true"><path d="M7 9h58M7 25h58M7 41h37" /><path class="empty-pencil" d="M48 42l13-13 5 5-13 13-7 2z" /></svg>
-                  <p>还没有记录。先写下今天的第一段时间。</p>
-                </div>
               </div>
             </section>
 

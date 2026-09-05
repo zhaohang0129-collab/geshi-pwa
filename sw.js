@@ -1,4 +1,4 @@
-const CACHE_NAME = "geshi-shell-v3";
+const CACHE_NAME = "geshi-shell-v4";
 const APP_SHELL = [
   "./", "./index.html", "./styles.css", "./app.js", "./manifest.json",
   "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png",
