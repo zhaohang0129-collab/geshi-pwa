@@ -4,8 +4,38 @@ const STORAGE_KEY = "geshi-data-v1";
 const QUOTE_CACHE_KEY = "geshi-daily-quote-v1";
 const QUOTE_ATTEMPT_KEY = "geshi-daily-quote-attempt-v1";
 const QUOTE_API_URL = "https://v1.hitokoto.cn/?c=i&c=d&c=k";
-// 等用户提供约 30 条风格统一的诗词、哲思语句后，直接填入这个数组。
-const DAILY_QUOTE_FALLBACKS = [];
+const FALLBACK_QUOTES = [
+  { text: "问渠那得清如许？为有源头活水来。", source: "朱熹《观书有感》", lang: "zh" },
+  { text: "人生代代无穷已，江月年年望相似。", source: "张若虚《春江花月夜》", lang: "zh" },
+  { text: "人生如逆旅，我亦是行人。", source: "苏轼", lang: "zh" },
+  { text: "吾生也有涯，而知也无涯。", source: "庄子《养生主》", lang: "zh" },
+  { text: "不识庐山真面目，只缘身在此山中。", source: "苏轼《题西林壁》", lang: "zh" },
+  { text: "宠辱不惊，闲看庭前花开花落。", source: "《菜根谭》", lang: "zh" },
+  { text: "盛年不重来，一日难再晨。", source: "陶渊明《杂诗》", lang: "zh" },
+  { text: "山重水复疑无路，柳暗花明又一村。", source: "陆游《游山西村》", lang: "zh" },
+  { text: "落红不是无情物，化作春泥更护花。", source: "龚自珍《己亥杂诗》", lang: "zh" },
+  { text: "行到水穷处，坐看云起时。", source: "王维《终南别业》", lang: "zh" },
+  { text: "沉舟侧畔千帆过，病树前头万木春。", source: "刘禹锡", lang: "zh" },
+  { text: "此心安处是吾乡。", source: "苏轼《定风波》", lang: "zh" },
+  { text: "路漫漫其修远兮，吾将上下而求索。", source: "屈原《离骚》", lang: "zh" },
+  { text: "知之者不如好之者，好之者不如乐之者。", source: "《论语·雍也》", lang: "zh" },
+  { text: "大巧若拙，大辩若讷。", source: "《老子》", lang: "zh" },
+  { text: "为学日益，为道日损。", source: "《老子》", lang: "zh" },
+  { text: "非淡泊无以明志，非宁静无以致远。", source: "诸葛亮《诫子书》", lang: "zh" },
+  { text: "衣带渐宽终不悔，为伊消得人憔悴。", source: "柳永《蝶恋花》", lang: "zh" },
+  { text: "万物皆流，无物常驻。", source: "赫拉克利特", lang: "zh" },
+  { text: "A mathematician, like a painter or a poet, is a maker of patterns.", source: "G. H. Hardy", lang: "en" },
+  { text: "Pure mathematics is, in its way, the poetry of logical ideas.", source: "Albert Einstein", lang: "en" },
+  { text: "Mathematics is the art of giving the same name to different things.", source: "Henri Poincaré", lang: "en" },
+  { text: "The essence of mathematics lies in its freedom.", source: "Georg Cantor", lang: "en" },
+  { text: "Mathematics, rightly viewed, possesses not only truth, but supreme beauty.", source: "Bertrand Russell", lang: "en" },
+  { text: "As if you could kill time without injuring eternity.", source: "Henry David Thoreau", lang: "en" },
+  { text: "Time is not a line, but a series of now-points.", source: "Rainer Maria Rilke", lang: "en" },
+  { text: "Attention is the rarest and purest form of generosity.", source: "Simone Weil", lang: "en" },
+  { text: "Mathematics is the music of reason.", source: "James Joseph Sylvester", lang: "en" },
+  { text: "In mathematics you don't understand things. You just get used to them.", source: "John von Neumann", lang: "en" },
+  { text: "The book of nature is written in the language of mathematics.", source: "Galileo Galilei", lang: "en" }
+];
 const DEFAULT_CONVERT_MINUTES = 30;
 const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
 const formatter = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "short" });
@@ -482,9 +512,10 @@ async function getDailyQuote() {
     }
   }
 
-  if (DAILY_QUOTE_FALLBACKS.length) {
+  if (FALLBACK_QUOTES.length) {
     const hash = Array.from(beijingDate).reduce((value, character) => ((value * 31) + character.charCodeAt(0)) >>> 0, 0);
-    return { text: DAILY_QUOTE_FALLBACKS[hash % DAILY_QUOTE_FALLBACKS.length], source: "fallback" };
+    const fallback = FALLBACK_QUOTES[hash % FALLBACK_QUOTES.length];
+    return { text: `${fallback.text} ——${fallback.source}`, source: "fallback" };
   }
   return { text: "", source: "none" };
 }
