@@ -1,6 +1,11 @@
 "use strict";
 
 const STORAGE_KEY = "geshi-data-v1";
+const QUOTE_CACHE_KEY = "geshi-daily-quote-v1";
+const QUOTE_ATTEMPT_KEY = "geshi-daily-quote-attempt-v1";
+const QUOTE_API_URL = "https://v1.hitokoto.cn/?c=i&c=d&c=k";
+// 等用户提供约 30 条风格统一的诗词、哲思语句后，直接填入这个数组。
+const DAILY_QUOTE_FALLBACKS = [];
 const DEFAULT_CONVERT_MINUTES = 30;
 const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
 const formatter = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "short" });
@@ -21,7 +26,7 @@ const els = {
   recordDialogTitle: document.querySelector("#record-dialog-title"), recordId: document.querySelector("#record-id"), recordLabel: document.querySelector("#record-label"),
   recordDuration: document.querySelector("#record-duration"), recordNote: document.querySelector("#record-note"), deleteRecord: document.querySelector("#delete-record"),
   importJson: document.querySelector("#import-json"), offlineStatus: document.querySelector("#offline-status"), toastRegion: document.querySelector("#toast-region"),
-  checkTemplate: document.querySelector("#check-template"),
+  checkTemplate: document.querySelector("#check-template"), dailyQuote: document.querySelector("#daily-quote"),
 };
 
 init();
@@ -32,6 +37,7 @@ function init() {
   const requestedView = location.hash.replace("#", "");
   switchView(["today", "month", "data"].includes(requestedView) ? requestedView : "today", false);
   renderAll();
+  renderDailyQuote();
   updateNetworkStatus();
   registerServiceWorker();
   registerWebMcp();
@@ -425,6 +431,70 @@ function parseDateKey(value) { const [year, month, day] = value.split("-").map(N
 function nextDateKey(value) { const date = parseDateKey(value); date.setDate(date.getDate() + 1); return dateKey(date); }
 function formatDuration(minutes) { if (minutes < 60) return `${minutes} 分钟`; const hours = Math.floor(minutes / 60); const rest = minutes % 60; return rest ? `${hours} 小时 ${rest} 分` : `${hours} 小时`; }
 function updateNetworkStatus() { els.offlineStatus.textContent = navigator.onLine ? "在线，离线副本已准备" : "当前离线，仍可正常使用"; }
+
+async function getDailyQuote() {
+  const beijingDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(new Date());
+  try {
+    const cached = JSON.parse(localStorage.getItem(QUOTE_CACHE_KEY) || "null");
+    if (cached?.date === beijingDate && typeof cached.text === "string" && cached.text.trim()) {
+      return { text: cached.text, source: "cache" };
+    }
+  } catch (error) {
+    console.warn("每日一句缓存读取失败", error);
+  }
+
+  let alreadyAttempted = false;
+  try {
+    alreadyAttempted = localStorage.getItem(QUOTE_ATTEMPT_KEY) === beijingDate;
+  } catch (error) {
+    console.warn("每日一句请求状态读取失败", error);
+  }
+  if (!alreadyAttempted) {
+    try {
+      try {
+        localStorage.setItem(QUOTE_ATTEMPT_KEY, beijingDate);
+      } catch (error) {
+        console.warn("每日一句请求状态写入失败", error);
+      }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      let response;
+      try {
+        response = await fetch(QUOTE_API_URL, { signal: controller.signal, headers: { Accept: "application/json" } });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (!response.ok) throw new Error(`Quote API returned ${response.status}`);
+      const payload = await response.json();
+      const quote = typeof payload.hitokoto === "string" ? payload.hitokoto.trim() : "";
+      const attributionValue = payload.from_who || payload.from;
+      const attribution = typeof attributionValue === "string" ? attributionValue.trim() : "";
+      if (!quote || !attribution) throw new Error("Quote API payload is incomplete");
+      const text = `${quote} ——${attribution}`;
+      try {
+        localStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify({ date: beijingDate, text }));
+      } catch (error) {
+        console.warn("每日一句缓存写入失败", error);
+      }
+      return { text, source: "api" };
+    } catch (error) {
+      console.warn("每日一句请求失败", error);
+    }
+  }
+
+  if (DAILY_QUOTE_FALLBACKS.length) {
+    const hash = Array.from(beijingDate).reduce((value, character) => ((value * 31) + character.charCodeAt(0)) >>> 0, 0);
+    return { text: DAILY_QUOTE_FALLBACKS[hash % DAILY_QUOTE_FALLBACKS.length], source: "fallback" };
+  }
+  return { text: "", source: "none" };
+}
+
+async function renderDailyQuote() {
+  const result = await getDailyQuote();
+  if (!result.text) return;
+  els.dailyQuote.textContent = result.text;
+  els.dailyQuote.hidden = false;
+}
 
 async function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) { els.offlineStatus.textContent = "当前浏览器不支持离线安装"; return; }
