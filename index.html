@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#faf8f3" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="格时" />
+    <meta name="description" content="离线可用的个人学习与休息时间记录本" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>格时 学习时间记录本</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="masthead">
+        <a class="brand" href="#today" aria-label="格时首页">
+          <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M8 4v32M20 4v32M32 4v32M4 10h32M4 22h32M4 34h32" />
+            <path class="brand-stroke" d="M8 29l7-8 6 4 11-15" />
+          </svg>
+          <span>
+            <strong>格时</strong>
+            <small>学习时间记录本</small>
+          </span>
+        </a>
+        <div class="date-stamp">
+          <span id="header-date">今天</span>
+          <span class="streak-mark" title="连续学习天数">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4-2 5-2 8 0 1.7 1.2 2.8 2.6 2.8 2.3 0 3.4-2.2 2.8-4.5 2.8 2 4.1 4.6 3.5 7.3-.7 3.5-3.5 6.2-7.3 6.2-4.2 0-7.5-3.2-7.5-7.3 0-3.3 2-6.2 5.5-8.5-.3 2.2.4 3.4 1.2 4.1C10.5 7.2 11.2 4.8 12 2Z" /></svg>
+            <b id="header-streak" class="num">0</b> 天
+          </span>
+        </div>
+      </header>
+
+      <nav class="section-tabs" aria-label="主要页面">
+        <button class="tab-button is-active" type="button" data-view="today" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4zM8 2v6M16 2v6M4 10h16" /></svg>
+          今日
+        </button>
+        <button class="tab-button" type="button" data-view="month">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 9h16M9 9v11M15 9v11" /></svg>
+          月度
+        </button>
+        <button class="tab-button" type="button" data-view="data">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 11l4 4 4-4M5 20h14" /></svg>
+          数据
+        </button>
+      </nav>
+
+      <main>
+        <section class="view is-active" id="view-today" data-view-panel="today">
+          <div id="due-todos-wrap" class="due-strip" hidden>
+            <div class="section-heading compact-heading">
+              <div>
+                <span class="eyebrow">昨日留下</span>
+                <h2>今天先做这些</h2>
+              </div>
+              <span id="due-progress" class="num annotation">0 / 0</span>
+            </div>
+            <ul id="due-todo-list" class="todo-lines" aria-label="今天到期待办"></ul>
+          </div>
+
+          <div class="notebook-spread">
+            <section class="page page-records" aria-labelledby="today-title">
+              <div class="section-heading">
+                <div>
+                  <span class="eyebrow">今日记录</span>
+                  <h1 id="today-title">今天把时间花在了哪里</h1>
+                </div>
+                <button class="ink-button" id="open-record-dialog" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                  记一笔
+                </button>
+              </div>
+
+              <div class="daily-summary" aria-label="今日时间汇总">
+                <div>
+                  <span>学习</span>
+                  <strong id="today-study" class="num study-ink">0 分钟</strong>
+                </div>
+                <div>
+                  <span>休息</span>
+                  <strong id="today-rest" class="num rest-ink">0 分钟</strong>
+                </div>
+                <div>
+                  <span>合计</span>
+                  <strong id="today-total" class="num">0 分钟</strong>
+                </div>
+              </div>
+
+              <div class="record-table-wrap">
+                <table class="record-table">
+                  <thead>
+                    <tr><th>事项</th><th>类型</th><th>时长</th><th><span class="sr-only">操作</span></th></tr>
+                  </thead>
+                  <tbody id="today-records"></tbody>
+                </table>
+                <div id="records-empty" class="empty-state">
+                  <svg viewBox="0 0 72 54" aria-hidden="true"><path d="M7 9h58M7 25h58M7 41h37" /><path class="empty-pencil" d="M48 42l13-13 5 5-13 13-7 2z" /></svg>
+                  <p>还没有记录。先写下今天的第一段时间。</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="page page-calendar" aria-labelledby="calendar-title">
+              <div class="section-heading">
+                <div>
+                  <span class="eyebrow">本月方格</span>
+                  <h2 id="calendar-title">学习热力图</h2>
+                </div>
+                <button class="text-button" type="button" data-go-month>查看详情</button>
+              </div>
+              <div id="home-calendar" class="calendar-grid" aria-label="本月学习时长日历"></div>
+              <div class="heat-legend" aria-label="颜色图例">
+                <span>少</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>多</span>
+              </div>
+
+              <div class="tomorrow-block">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <span class="eyebrow">明日待办</span>
+                    <h2>给明天留一页</h2>
+                  </div>
+                </div>
+                <form id="tomorrow-form" class="line-input-form">
+                  <label class="sr-only" for="tomorrow-input">明天要做的事</label>
+                  <input id="tomorrow-input" type="text" maxlength="100" placeholder="例如：复习概率论第 3 章" autocomplete="off" required />
+                  <button type="submit">写下</button>
+                </form>
+                <ul id="tomorrow-list" class="todo-lines quiet-todos"></ul>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-month" data-view-panel="month" hidden>
+          <div class="month-toolbar">
+            <div>
+              <span class="eyebrow">月度总览</span>
+              <h1>这一月的时间答卷</h1>
+            </div>
+            <label class="month-picker-label">查看月份 <input id="month-picker" class="num" type="month" /></label>
+          </div>
+          <div class="monthly-sheet">
+            <section class="month-calendar-section" aria-labelledby="month-calendar-title">
+              <h2 id="month-calendar-title">每日学习时长</h2>
+              <div id="month-calendar" class="calendar-grid large-calendar"></div>
+              <div class="heat-legend"><span>少</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>多</span></div>
+            </section>
+            <section class="month-analysis" aria-labelledby="month-analysis-title">
+              <h2 id="month-analysis-title">统计清单</h2>
+              <dl class="ledger-list">
+                <div><dt>学习总时长</dt><dd id="month-study" class="num study-ink">0 分钟</dd></div>
+                <div><dt>休息总时长</dt><dd id="month-rest" class="num rest-ink">0 分钟</dd></div>
+                <div><dt>有记录的天数</dt><dd id="month-days" class="num">0 天</dd></div>
+                <div class="streak-row"><dt>当前连续打卡</dt><dd id="month-streak" class="num">0 天</dd></div>
+              </dl>
+              <div class="label-breakdown">
+                <h3>学习标签占比</h3>
+                <div id="label-breakdown-list"></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-data" data-view-panel="data" hidden>
+          <div class="data-heading">
+            <span class="eyebrow">备份与迁移</span>
+            <h1>把记录收好</h1>
+            <p>所有数据只保存在这台设备的浏览器中。换手机或清理 Safari 前，记得先导出一份备份。</p>
+          </div>
+          <div class="settings-ledger">
+            <section>
+              <div class="setting-copy"><h2>完整 JSON 备份</h2><p>包含记录、待办及完成状态，可在另一台设备完整恢复。</p></div>
+              <div class="setting-actions">
+                <button class="outline-button" id="export-json" type="button">导出 JSON</button>
+                <label class="outline-button file-button">导入 JSON<input id="import-json" type="file" accept="application/json,.json" /></label>
+              </div>
+            </section>
+            <section>
+              <div class="setting-copy"><h2>CSV 明细</h2><p>适合在 Excel、Numbers 或其他表格工具中继续分析。</p></div>
+              <button class="outline-button" id="export-csv" type="button">导出 CSV</button>
+            </section>
+            <section>
+              <div class="setting-copy"><h2>安装到 iPhone</h2><p>在 Safari 点“分享”，选择“添加到主屏幕”。首次打开后，即使断网也能继续记录。</p></div>
+              <span id="offline-status" class="status-note">正在确认离线状态</span>
+            </section>
+          </div>
+          <p class="privacy-note">数据不会上传到任何服务器。</p>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="record-dialog" class="record-dialog">
+      <form id="record-form" method="dialog">
+        <div class="dialog-heading">
+          <div><span class="eyebrow">时间记录</span><h2 id="record-dialog-title">记一笔</h2></div>
+          <button class="icon-button" id="close-record-dialog" type="button" aria-label="关闭">×</button>
+        </div>
+        <input type="hidden" id="record-id" />
+        <div class="field-grid">
+          <label class="field field-wide">标签<input id="record-label" type="text" maxlength="40" placeholder="数学专业课" required /></label>
+          <fieldset class="field type-choice">
+            <legend>类型</legend>
+            <label><input type="radio" name="record-type" value="study" checked /><span>学习</span></label>
+            <label><input type="radio" name="record-type" value="rest" /><span>休息</span></label>
+          </fieldset>
+          <label class="field">时长（分钟）<input id="record-duration" class="num" type="number" inputmode="numeric" min="1" max="1440" placeholder="45" required /></label>
+          <label class="field field-wide">备注<textarea id="record-note" maxlength="160" rows="3" placeholder="可不填"></textarea></label>
+        </div>
+        <div class="dialog-actions">
+          <button class="text-button danger-text" id="delete-record" type="button" hidden>删除</button>
+          <span></span>
+          <button class="outline-button" id="cancel-record" type="button">取消</button>
+          <button class="ink-button" type="submit">保存记录</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <template id="check-template"><svg class="draw-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg></template>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
